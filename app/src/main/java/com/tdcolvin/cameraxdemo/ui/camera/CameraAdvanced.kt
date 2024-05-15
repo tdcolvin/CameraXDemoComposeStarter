@@ -7,6 +7,7 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Button
@@ -15,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -30,26 +32,37 @@ fun TakePictureScreenAdvanced(
     modifier: Modifier = Modifier
 ) {
     var zoom by remember { mutableFloatStateOf(0.5f) }
+    var lensFacing by remember { mutableIntStateOf(CameraSelector.LENS_FACING_BACK) }
 
     Box(modifier = modifier) {
         CameraPreview(
             modifier = Modifier.fillMaxSize(),
             zoom = zoom,
-            lensFacing = CameraSelector.LENS_FACING_BACK
+            lensFacing = lensFacing
         )
 
-        Row(modifier = Modifier.align(Alignment.BottomCenter)) {
-            Button(onClick = { zoom = 1.0f }) {
-                Text("Zoom 1.0")
+        Column(modifier = Modifier.align(Alignment.BottomCenter)) {
+            Row(modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                Button(onClick = { lensFacing = CameraSelector.LENS_FACING_FRONT }) {
+                    Text("Front camera")
+                }
+                Button(onClick = { lensFacing = CameraSelector.LENS_FACING_BACK }) {
+                    Text("Back camera")
+                }
             }
-            Button(onClick = { zoom = 0.75f }) {
-                Text("Zoom 0.75")
-            }
-            Button(onClick = { zoom = 0.5f }) {
-                Text("Zoom 0.5")
-            }
-            Button(onClick = { zoom = 0f }) {
-                Text("Zoom 0.0")
+            Row(modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                Button(onClick = { zoom = 1.0f }) {
+                    Text("Zoom 1.0")
+                }
+                Button(onClick = { zoom = 0.75f }) {
+                    Text("Zoom 0.75")
+                }
+                Button(onClick = { zoom = 0.5f }) {
+                    Text("Zoom 0.5")
+                }
+                Button(onClick = { zoom = 0f }) {
+                    Text("Zoom 0.0")
+                }
             }
         }
     }
@@ -71,7 +84,7 @@ fun CameraPreview(
         cameraControl?.setLinearZoom(zoom)
     }
 
-    LaunchedEffect(null) {
+    LaunchedEffect(Unit) {
         val providerFuture = ProcessCameraProvider.getInstance(baseContext)
         providerFuture.addListener({
             cameraProvider = providerFuture.get()
@@ -87,6 +100,7 @@ fun CameraPreview(
                     .requireLensFacing(lensFacing)
                     .build()
                 preview.setSurfaceProvider(previewView.surfaceProvider)
+                cameraProvider.unbindAll()
                 val camera = cameraProvider.bindToLifecycle(baseContext as LifecycleOwner, cameraSelector, preview)
                 cameraControl = camera.cameraControl
                 cameraControl?.setLinearZoom(zoom)
