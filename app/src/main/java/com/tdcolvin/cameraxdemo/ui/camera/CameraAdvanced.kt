@@ -6,6 +6,7 @@ import androidx.camera.core.CameraSelector
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,6 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
@@ -50,18 +52,23 @@ fun TakePictureScreenAdvanced(
                     Text("Back camera")
                 }
             }
-            Row(modifier = Modifier.align(Alignment.CenterHorizontally)) {
-                Button(onClick = { zoom = 1.0f }) {
-                    Text("Zoom 1.0")
-                }
-                Button(onClick = { zoom = 0.75f }) {
-                    Text("Zoom 0.75")
+            Row(
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(text = "Zoom: ", modifier = Modifier.background(Color.White), color = Color.Black)
+                Button(onClick = { zoom = 0f }) {
+                    Text("0.00")
                 }
                 Button(onClick = { zoom = 0.5f }) {
-                    Text("Zoom 0.5")
+                    Text("0.50")
                 }
-                Button(onClick = { zoom = 0f }) {
-                    Text("Zoom 0.0")
+                Button(onClick = { zoom = 0.75f }) {
+                    Text("0.75")
+                }
+                Button(onClick = { zoom = 1.0f }) {
+                    Text("1.00")
                 }
             }
         }
