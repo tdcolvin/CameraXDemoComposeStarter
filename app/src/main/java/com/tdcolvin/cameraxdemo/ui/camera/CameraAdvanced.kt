@@ -116,7 +116,7 @@ fun TakePictureScreenAdvanced(
 @Composable
 fun CameraPreview(
     modifier: Modifier = Modifier,
-    lensFacing: Int = CameraSelector.LENS_FACING_FRONT,
+    lensFacing: Int = CameraSelector.LENS_FACING_BACK,
     zoom: Float = 0.5f,
     takePicture: Flow<Unit> = flowOf(),
     onPictureTaken: (Uri?, Exception?) -> Unit = { _, _ -> },
