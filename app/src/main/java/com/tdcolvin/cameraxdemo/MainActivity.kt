@@ -1,6 +1,9 @@
 package com.tdcolvin.cameraxdemo
 
 import android.Manifest
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -12,6 +15,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.core.content.FileProvider
+import androidx.core.net.toFile
 import com.tdcolvin.cameraxdemo.ui.permission.WithPermission
 import com.tdcolvin.cameraxdemo.ui.theme.CameraXDemoTheme
 
@@ -53,3 +58,13 @@ fun Color.Companion.random(): Color =
         green = Math.random().toFloat(),
         blue = Math.random().toFloat()
     )
+
+fun Context.shareImage(uri: Uri) {
+    val contentUri = FileProvider.getUriForFile(this, "com.tdcolvin.cameraxdemo.fileprovider", uri.toFile())
+    val shareIntent: Intent = Intent().apply {
+        action = Intent.ACTION_SEND
+        putExtra(Intent.EXTRA_STREAM, contentUri)
+        type = "image/jpeg"
+    }
+    startActivity(Intent.createChooser(shareIntent, null))
+}
