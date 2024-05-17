@@ -20,7 +20,7 @@ fun MainNavigation(modifier: Modifier = Modifier) {
     }
 
     if (!permissionGranted) {
-        PermissionRequiredScreen(modifier = modifier) { permissionGranted = true }
+        PermissionRequiredScreen(modifier = modifier, permission = Manifest.permission.CAMERA) { permissionGranted = true }
     }
     else {
         TakePictureScreenAdvanced(
