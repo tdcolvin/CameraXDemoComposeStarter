@@ -23,7 +23,7 @@ class MainActivity : ComponentActivity() {
             CameraXDemoTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     WithPermission(
-                        modifier = Modifier.padding(innerPadding),
+                        modifier = Modifier.fillMaxSize().padding(innerPadding),
                         permission = Manifest.permission.CAMERA
                     ) {
                         CameraAppScreen()
