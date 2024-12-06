@@ -37,6 +37,8 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun CameraAppScreen() {
     //Start here!
+    
+    // For later on: TakePictureScreenAdvanced(modifier = Modifier.fillMaxSize())
 }
 
 @Preview(widthDp = 400, heightDp = 700, showSystemUi = true)
