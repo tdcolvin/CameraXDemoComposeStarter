@@ -1,15 +1,8 @@
 package com.tdcolvin.cameraxdemo.ui.camera
 
-import android.content.Intent
-import android.net.Uri
-import android.util.Log
-import androidx.camera.core.CameraControl
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
-import androidx.camera.core.Preview
-import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,60 +11,35 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
-import androidx.core.content.FileProvider
-import androidx.core.net.toFile
-import androidx.lifecycle.LifecycleOwner
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.launch
+import com.tdcolvin.cameraxdemo.ui.shareAsImage
 import java.io.File
 
 @Composable
 fun TakePictureScreenAdvanced(
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
-
-    var zoom by remember { mutableFloatStateOf(0.5f) }
+    var zoomLevel by remember { mutableFloatStateOf(0.5f) }
     var lensFacing by remember { mutableIntStateOf(CameraSelector.LENS_FACING_BACK) }
-    val takePicture = remember { MutableSharedFlow<Unit>() }
-    val takePictureScope = rememberCoroutineScope()
+    val imageCaptureUseCase = remember { ImageCapture.Builder().build() }
+
+    val localContext = LocalContext.current
 
     Box(modifier = modifier) {
         CameraPreview(
             modifier = Modifier.fillMaxSize(),
-            zoom = zoom,
+            zoomLevel = zoomLevel,
             lensFacing = lensFacing,
-            takePicture = takePicture,
-            onPictureTaken = { uri, error ->
-                error?.let {
-                    Log.e("cameraxdemo", "Error taking picture", error)
-                }
-                uri?.let {
-                    val contentUri = FileProvider.getUriForFile(context, "com.tdcolvin.cameraxdemo.fileprovider", uri.toFile())
-                    val shareIntent: Intent = Intent().apply {
-                        action = Intent.ACTION_SEND
-                        putExtra(Intent.EXTRA_STREAM, contentUri)
-                        type = "image/jpeg"
-                    }
-                    context.startActivity(Intent.createChooser(shareIntent, null))
-                }
-            }
+            imageCaptureUseCase = imageCaptureUseCase
         )
 
         Column(modifier = Modifier.align(Alignment.BottomCenter)) {
@@ -89,23 +57,31 @@ fun TakePictureScreenAdvanced(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(text = "Zoom: ", modifier = Modifier.background(Color.White), color = Color.Black)
-                Button(onClick = { zoom = 0f }) {
+                Button(onClick = { zoomLevel = 0f }) {
                     Text("0.00")
                 }
-                Button(onClick = { zoom = 0.5f }) {
+                Button(onClick = { zoomLevel = 0.5f }) {
                     Text("0.50")
                 }
-                Button(onClick = { zoom = 0.75f }) {
+                Button(onClick = { zoomLevel = 0.75f }) {
                     Text("0.75")
                 }
-                Button(onClick = { zoom = 1.0f }) {
+                Button(onClick = { zoomLevel = 1.0f }) {
                     Text("1.00")
                 }
             }
             Button(onClick = {
-                takePictureScope.launch {
-                    takePicture.emit(Unit)
+                val outputFileOptions = ImageCapture.OutputFileOptions.Builder(File(localContext.externalCacheDir, "image.jpg"))
+                    .build()
+                val callback = object: ImageCapture.OnImageSavedCallback {
+                    override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
+                        outputFileResults.savedUri?.shareAsImage(localContext)
+                    }
+
+                    override fun onError(exception: ImageCaptureException) {
+                    }
                 }
+                imageCaptureUseCase.takePicture(outputFileOptions, ContextCompat.getMainExecutor(localContext), callback)
             }) {
                 Text("Take Picture")
             }
@@ -116,61 +92,90 @@ fun TakePictureScreenAdvanced(
 @Composable
 fun CameraPreview(
     modifier: Modifier = Modifier,
-    lensFacing: Int = CameraSelector.LENS_FACING_BACK,
-    zoom: Float = 0.5f,
-    takePicture: Flow<Unit> = flowOf(),
-    onPictureTaken: (Uri?, Exception?) -> Unit = { _, _ -> },
+    lensFacing: Int,
+    zoomLevel: Float,
+    imageCaptureUseCase: ImageCapture
 ) {
-    val baseContext = LocalContext.current
+    /*
+       TODO:
 
-    var cameraProvider by remember { mutableStateOf<ProcessCameraProvider?>(null) }
-    var cameraControl by remember { mutableStateOf<CameraControl?>(null) }
-    val preview = remember { Preview.Builder().build() }
-    val imageCapture = remember { ImageCapture.Builder().build() }
+       1. Create a PreviewView
+       -----------------------
+       Because PreviewView isn't a Composable, we need to wrap it in an AndroidView.
+       This is a Composable which displays an older-style Android Views widget.
 
-    LaunchedEffect(zoom) {
-        cameraControl?.setLinearZoom(zoom)
-    }
+       Hint:
+         AndroidView(
+            modifier = ...
+            factory = { context ->
+               <instantiate your PreviewView here>
+            }
+         )
 
-    LaunchedEffect(Unit) {
-        val providerFuture = ProcessCameraProvider.getInstance(baseContext)
-        providerFuture.addListener({
-            cameraProvider = providerFuture.get()
-        }, ContextCompat.getMainExecutor(baseContext))
-    }
 
-    LaunchedEffect(takePicture) {
-        takePicture.collect {
-            val outputFileOptions = ImageCapture.OutputFileOptions
-                .Builder(File(baseContext.externalCacheDir, "image.jpg"))
+       Now run the code. You should find it shows a blank screen.
+       Why's that? Because you haven't linked the PreviewView up to a PreviewUseCase...
+
+
+       2. Create a PreviewUseCase
+       --------------------------
+       This tells the PreviewView you created earlier what to display.
+
+       Hint: remember {  } it!
+       The class you need is androidx.camera.core.Preview.Builder. You don't need any options,
+       just build() it.
+
+
+       3. Draw onto the PreviewView
+       ----------------------------
+       Then, tell your PreviewUseCase to draw onto the surface of the PreviewView.
+       Hint: set the use case's surface provider to be the PreviewView's surface provider:
+
+       previewUseCase.setSurfaceProvider(...)
+
+       You only need to do this once, when you are creating the PreviewView.
+
+
+       Now run the code again. Another blank screen?
+       This time, it's because you need to bind it all together using a CameraProvider
+       instance.
+
+
+       4. Get a CameraProvider instance.
+       ---------------------------------
+       The specific kind of CameraProvider we're going to get is a ProcessCameraProvider.
+       We ask for it using:
+       val providerFuture = ProcessCameraProvider.getInstance(localContext)
+       providerFuture.addListener({ ... }, ContextCompat.getMainExecutor(localContext))
+
+       When the listener fires, it means you can use providerFuture.get() to return
+       the ProcessCameraProvider.
+
+       How can you run all the code in this step just once when the CameraPreview
+       composable appears in the composition?
+       Hint: LaunchedEffect(...) {  }
+
+
+       5. Bind it all together
+       -----------------------
+
+       Build a CameraSelector:
+            val cameraSelector = CameraSelector.Builder()
+                .requireLensFacing(...)
                 .build()
-            val callback = object: ImageCapture.OnImageSavedCallback {
-                override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
-                    onPictureTaken(outputFileResults.savedUri, null)
-                }
-                override fun onError(exception: ImageCaptureException) {
-                    onPictureTaken(null, exception)
-                }
-            }
-            imageCapture.takePicture(outputFileOptions, ContextCompat.getMainExecutor(baseContext), callback)
-        }
-    }
 
-    AndroidView(
-        modifier = modifier.fillMaxSize(),
-        factory = { context -> PreviewView(context) },
-        update = { previewView ->
-            cameraProvider?.let { cameraProvider ->
-                Log.v("cameraxdemo", "Rebuilding camera")
-                val cameraSelector = CameraSelector.Builder()
-                    .requireLensFacing(lensFacing)
-                    .build()
-                preview.setSurfaceProvider(previewView.surfaceProvider)
-                cameraProvider.unbindAll()
-                val camera = cameraProvider.bindToLifecycle(baseContext as LifecycleOwner, cameraSelector, preview, imageCapture)
-                cameraControl = camera.cameraControl
-                cameraControl?.setLinearZoom(zoom)
-            }
-        }
-    )
+       and then bind it all together using the CameraProvider, passing in the CameraSelector
+       you've just created:
+
+            cameraProvider.bindToLifecycle(
+                localContext as LifecycleOwner,
+                cameraSelector,
+                previewUseCase, imageCaptureUseCase
+            )
+
+
+      Run it! You should now have a working preview!!!
+
+      See if you can make the zoom and camera selector buttons work.
+     */
 }
